@@ -1,0 +1,124 @@
+{-# STDLIB_VERSION 4 #-}
+{-# CONTENT_TYPE DAPP #-}
+{-# SCRIPT_TYPE ACCOUNT #-}
+
+let ownerKey = "_o"
+let balanceKey = "_b"
+let approvalKey = "_a"
+let operatorApprovalKey = "_oa"
+
+func checkExistence(tokenId: Int) = match getString(this, tokenId.toString() + ownerKey) {
+  case a:String => true
+  case _ => false
+}
+
+func getBalance(account: String) = match getInteger(this, account + balanceKey) {
+  case a:Int => a
+  case _ => 0
+}
+
+func getApproval(tokenId: Int) = match getString(this, tokenId.toString() + approvalKey) {
+  case a:String => a
+  case _ => ""
+}
+
+func getOwner(tokenId: Int) = match getString(this, tokenId.toString() + ownerKey) {
+  case o:String => o
+  case _ => ""
+}
+
+@Callable(i)
+func mint(account: String, tokenId: Int) = {
+  let currentBalance = getBalance(account)
+  let address = match addressFromString(account) {
+    case a: Address => a.toString()
+    case _ => throw("Invalid address")
+  }
+  let exists = checkExistence(tokenId)
+  if (exists) then throw("Token already minted")
+  else [
+    IntegerEntry(account + balanceKey, currentBalance + 1),
+    StringEntry(tokenId.toString() + ownerKey, address)
+  ]
+}
+
+@Callable(i)
+func burn(tokenId: Int) = {
+  let exists = checkExistence(tokenId)
+  if (!exists) then throw("Token doesn't exist")
+  else {
+    let owner = getOwner(tokenId)
+    let currentBalance = getBalance(owner)
+    [
+      IntegerEntry(owner + balanceKey, currentBalance - 1),
+      DeleteEntry(tokenId.toString() + approvalKey),
+      DeleteEntry(tokenId.toString() + ownerKey)
+    ]
+  }
+}
+
+@Callable(i)
+func approve(to: String, tokenId: Int) = {
+  let caller = addressFromPublicKey(i.callerPublicKey).toString()
+  let owner = getOwner(tokenId)
+  if (owner != caller) then throw("Approve caller is not owner")
+  else [
+    StringEntry(tokenId.toString() + approvalKey, to)
+  ]
+}
+
+@Callable(i)
+func transfer(address: String, tokenId: Int) = {
+  let from = addressFromPublicKey(i.callerPublicKey).toString()
+  let owner = getOwner(tokenId)
+  if (owner != from) then throw("Transfer caller is not owner")
+  else {
+    let to = match addressFromString(address) {
+      case a: Address => a.toString()
+      case _ => throw("Invalid address")
+    }
+    let currentBalanceFrom = getBalance(from)
+    let currentBalanceTo = getBalance(to)
+    [
+      DeleteEntry(tokenId.toString() + approvalKey),
+      IntegerEntry(from + balanceKey, currentBalanceFrom - 1),
+      IntegerEntry(to + balanceKey, currentBalanceTo + 1),
+      StringEntry(tokenId.toString() + ownerKey, to)
+    ]
+  }
+}
+
+
+@Callable(i)
+func transferFrom(from: String, to: String, tokenId: Int) = {
+  let caller = addressFromPublicKey(i.callerPublicKey).toString()
+  let owner = getOwner(tokenId)
+  if (owner != from) then throw("Transfer caller is not owner")
+  else {
+    let approval = getApproval(tokenId)
+    if (approval != caller) then throw("Transfer caller is not owner")
+    else {
+      let address = match addressFromString(to) {
+        case a: Address => a.toString()
+        case _ => throw("Invalid address")
+      }
+      let currentBalanceFrom = getBalance(from)
+      let currentBalanceTo = getBalance(address)
+      [
+        DeleteEntry(tokenId.toString() + approvalKey),
+        IntegerEntry(from + balanceKey, currentBalanceFrom - 1),
+        IntegerEntry(address + balanceKey, currentBalanceTo + 1),
+        StringEntry(tokenId.toString() + ownerKey, to)
+      ]
+    }
+  }
+}
+
+@Verifier(tx)
+func verify() = {
+  match(tx) {
+    case _:DataTransaction => false
+    case _:SetScriptTransaction => false
+    case _ => sigVerify(tx.bodyBytes, tx.proofs[0], tx.senderPublicKey)
+  }
+}
