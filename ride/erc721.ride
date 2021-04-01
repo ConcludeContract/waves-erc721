@@ -96,7 +96,7 @@ func transferFrom(from: String, to: String, tokenId: Int) = {
   if (owner != from) then throw("Transfer caller is not owner")
   else {
     let approval = getApproval(tokenId)
-    if (approval != caller) then throw("Transfer caller is not owner")
+    if (approval != caller) then throw("Transfer caller is not approve")
     else {
       let address = match addressFromString(to) {
         case a: Address => a.toString()
