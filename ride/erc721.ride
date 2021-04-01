@@ -2,6 +2,8 @@
 {-# CONTENT_TYPE DAPP #-}
 {-# SCRIPT_TYPE ACCOUNT #-}
 
+# Implementation of the ERC721 token (NFT)
+
 let ownerKey = "_o"
 let balanceKey = "_b"
 let approvalKey = "_a"
