@@ -5,7 +5,6 @@
 let ownerKey = "_o"
 let balanceKey = "_b"
 let approvalKey = "_a"
-let operatorApprovalKey = "_oa"
 
 func checkExistence(tokenId: Int) = match getString(this, tokenId.toString() + ownerKey) {
   case a:String => true
