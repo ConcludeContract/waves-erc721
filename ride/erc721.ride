@@ -28,6 +28,7 @@ func getOwner(tokenId: Int) = match getString(this, tokenId.toString() + ownerKe
   case _ => ""
 }
 
+# You need to explicitly check who can burn tokens
 @Callable(i)
 func mint(account: String, tokenId: Int) = {
   let currentBalance = getBalance(account)
@@ -43,6 +44,7 @@ func mint(account: String, tokenId: Int) = {
   ]
 }
 
+# You need to explicitly check who can burn tokens
 @Callable(i)
 func burn(tokenId: Int) = {
   let exists = checkExistence(tokenId)
